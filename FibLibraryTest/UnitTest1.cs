@@ -6,8 +6,8 @@ namespace StringLibraryTest;
 [TestClass]
 public class UnitTest1
 {
-    [TestMethod]
-    public void TestGetFib21()
+    [IterativeTestMethod(25)]
+    public void TestGetFib42()
     {
         Assert.AreEqual(FibLibrary.GetFib(42), 165580141);
     }
