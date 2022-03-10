@@ -3,9 +3,33 @@ using System.Collections.Generic;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System.Diagnostics;
 using System.IO;
+using System.Threading;
 
 namespace StringLibraryTest
 {
+
+    public class RAPLTestResult : TestResult {
+
+        public Decimal RAPLValue { get; }
+        public RAPLTestResult(Decimal RAPLValue, TestResult data) : base(){
+            this.RAPLValue = RAPLValue;
+            this.DisplayName = data.DisplayName;
+            this.Outcome = data.Outcome;
+            this.TestFailureException = data.TestFailureException;
+            this.LogOutput = data.LogOutput;
+            this.LogError = data.LogError;
+            this.DebugTrace = data.DebugTrace;
+            this.TestContextMessages = data.TestContextMessages;
+            this.ExecutionId = data.ExecutionId;
+            this.ParentExecId = data.ParentExecId;
+            this.InnerResultsCount = data.InnerResultsCount;
+            this.Duration = data.Duration;
+            this.DatarowIndex = data.DatarowIndex;
+            this.ReturnValue = data.ReturnValue;
+            this.ResultFiles = data.ResultFiles;
+
+        }
+    }
 
     public class RAPLPackage { 
 
@@ -42,8 +66,6 @@ namespace StringLibraryTest
     public class IterativeTestMethodAttribute : TestMethodAttribute
     {
         private int stabilityThreshold;
-
-        private Decimal rapl_value;
         private const string FILE_PATH = "/sys/devices/virtual/powercap/intel-rapl/intel-rapl:0/energy_uj";
 
         private Decimal read_rapl_value() {
@@ -59,17 +81,32 @@ namespace StringLibraryTest
 
         public override TestResult[] Execute(ITestMethod testMethod)
         {
-            var results = new List<TestResult>();
-            rapl_value = read_rapl_value();
-            var x = new RAPLPackage("/sys/devices/virtual/powercap/intel-rapl/intel-rapl:0");
+            var results = new List<RAPLTestResult>();
+            Console.WriteLine("Iteration;RAPL-Value;Old-RAPL;New-RAPL;Ticks");
             for (int count = 0; count < this.stabilityThreshold; count++)
             {
+                Decimal before_value = read_rapl_value();
+                var watch = System.Diagnostics.Stopwatch.StartNew();
+
                 var currentResults = base.Execute(testMethod);
-                results.AddRange(currentResults);
-                Console.WriteLine(count);
+
+                Decimal new_value = read_rapl_value();
+                watch.Stop();
+                Thread.Sleep(1000);
+                foreach(var currentResult in currentResults) {
+                    RAPLTestResult current = new RAPLTestResult(new_value-before_value, currentResult);
+                    results.Add(current);
+                }
+                Console.WriteLine("{0};{1};{2};{3};{4}", count, new_value-before_value, before_value, new_value, watch.ElapsedTicks);
+
+                
+                //Console.WriteLine("Iteration: {0} RAPL-Value: {1}, Old: {2}, New: {3}, Time: {4}", count, new_value-before_value, before_value, new_value, watch.ElapsedTicks);
             }
-            Decimal new_value = read_rapl_value();
-            Console.WriteLine("Energy usage: {0}", new_value - rapl_value);
+            var ticks_per_seconds = (decimal) 1 / Stopwatch.Frequency;
+            var ticks_per_milliseconds = (decimal) 1 / Stopwatch.Frequency * 1000;
+            var ticks_per_nanoseconds = (decimal) 1 / Stopwatch.Frequency * 1000000000;
+            Console.WriteLine("Sec per tick: {0}, ms per tick: {1}, ns per tick: {2}", ticks_per_seconds, ticks_per_milliseconds, ticks_per_nanoseconds);
+            System.Console.WriteLine("Frequency: {0}", System.Diagnostics.Stopwatch.Frequency);
             return results.ToArray();
         }
     }
