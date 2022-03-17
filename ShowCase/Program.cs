@@ -9,7 +9,7 @@ class Program
 
         return Decimal.Parse(raw_value);
     }
-    static async void Main(string[] args){
+    static void Main(string[] args){
         Console.WriteLine("Iteration;RAPL-Value;Old-RAPL;New-RAPL;Ticks");
         for(int count = 0; count < 25; count++){
             Decimal before_value = read_rapl_value();
