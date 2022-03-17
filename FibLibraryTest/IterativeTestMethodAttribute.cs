@@ -92,7 +92,7 @@ namespace StringLibraryTest
 
                 Decimal new_value = read_rapl_value();
                 watch.Stop();
-                Thread.Sleep(1000);
+                //Thread.Sleep(1000);
                 foreach(var currentResult in currentResults) {
                     RAPLTestResult current = new RAPLTestResult(new_value-before_value, currentResult);
                     results.Add(current);
