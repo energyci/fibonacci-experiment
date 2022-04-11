@@ -81,27 +81,20 @@ namespace StringLibraryTest
 
         public override TestResult[] Execute(ITestMethod testMethod)
         {
-            var results = new List<RAPLTestResult>();
-            Console.WriteLine("Iteration;RAPL-Value;Old-RAPL;New-RAPL;Ticks");
+            var results = new List<TestResult>();
+            Console.WriteLine("Avg;RAPL-Value;Old-RAPL;New-RAPL;Ticks");
+            Decimal before_value = read_rapl_value();
+            var watch = System.Diagnostics.Stopwatch.StartNew();
             for (int count = 0; count < this.stabilityThreshold; count++)
             {
-                Decimal before_value = read_rapl_value();
-                var watch = System.Diagnostics.Stopwatch.StartNew();
 
                 var currentResults = base.Execute(testMethod);
-
-                Decimal new_value = read_rapl_value();
-                watch.Stop();
-                //Thread.Sleep(1000);
-                foreach(var currentResult in currentResults) {
-                    RAPLTestResult current = new RAPLTestResult(new_value-before_value, currentResult);
-                    results.Add(current);
-                }
-                Console.WriteLine("{0};{1};{2};{3};{4}", count, new_value-before_value, before_value, new_value, watch.ElapsedTicks);
-
-                
-                //Console.WriteLine("Iteration: {0} RAPL-Value: {1}, Old: {2}, New: {3}, Time: {4}", count, new_value-before_value, before_value, new_value, watch.ElapsedTicks);
+                results.AddRange(currentResults);
             }
+            Decimal new_value = read_rapl_value();
+            watch.Stop();
+            var energy = new_value - before_value;
+            Console.WriteLine("{0};{1};{2};{3};{4}", energy / stabilityThreshold, energy, before_value, new_value, watch.ElapsedTicks);
             var ticks_per_seconds = (decimal) 1 / Stopwatch.Frequency;
             var ticks_per_milliseconds = (decimal) 1 / Stopwatch.Frequency * 1000;
             var ticks_per_nanoseconds = (decimal) 1 / Stopwatch.Frequency * 1000000000;
