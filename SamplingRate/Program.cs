@@ -1,6 +1,7 @@
 using System.Text;
 using System.Diagnostics;
 using System.Linq;
+using System.Collections.Generic;
 
 class Program {
     private const string FILE_PATH = "/sys/class/powercap/intel-rapl/intel-rapl:0/intel-rapl:0:0/energy_uj";
@@ -28,7 +29,9 @@ class Program {
 
     private static void log_while_true_rapl(int update_counts) {
         int target_iteration = update_counts - 1;
-        StringBuilder sb = new StringBuilder();
+
+        List<(string, long)> measurements = new List<(string, long)>(1_000_000_000);
+
         bool count_reached = false;
         int curr_iteration = 0;
         var old_rapl_value = read_rapl_value();
@@ -37,14 +40,16 @@ class Program {
 
         while (!count_reached) {
             rapl_value = read_rapl_value();
-            sb.Append(rapl_value).Append(";").Append(watch.ElapsedTicks).AppendLine();
+            measurements.Add((rapl_value, watch.ElapsedTicks));
             if (rapl_value != old_rapl_value) {
                 old_rapl_value = rapl_value;
                 curr_iteration += 1;
             }
             count_reached = curr_iteration == target_iteration;
         }
-        System.Console.WriteLine(sb.ToString());
+        foreach (var tuple in measurements) {
+            System.Console.WriteLine(tuple.Item1.Replace("\n", String.Empty) + ";" + tuple.Item2);
+        }
 
     }
 
