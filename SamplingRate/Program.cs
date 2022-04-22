@@ -10,10 +10,11 @@ class Program {
         return System.IO.File.ReadAllText(FILE_PATH);
     }
 
-    private static void rapl_update_interval(int measurement_cnt) {
-        long[] measurements = new long[measurement_cnt];
+    private static void rapl_update_interval(int measurement_time_secs) {
+        List<long> measurements = new List<long>(1_000_000_000);
+        var outer_watch = Stopwatch.StartNew();
 
-        for (int i = 0; i < measurement_cnt; i++) {
+        while (outer_watch.ElapsedMilliseconds < measurement_time_secs * 1000) {
             bool changed = false;
             var inital_value = read_rapl_value();
             var watch = System.Diagnostics.Stopwatch.StartNew();
@@ -22,30 +23,20 @@ class Program {
                 changed = new_value != inital_value;
             }
             watch.Stop();
-            measurements[i] = watch.ElapsedTicks;
+            measurements.Add(watch.ElapsedTicks);
         }
         System.Console.WriteLine(String.Join("\n", measurements));
     }
 
-    private static void log_while_true_rapl(int update_counts) {
-        int target_iteration = update_counts - 1;
+    private static void log_while_true_rapl(int measurement_time_secs) {
 
         List<(string, long)> measurements = new List<(string, long)>(1_000_000_000);
 
-        bool count_reached = false;
-        int curr_iteration = 0;
-        var old_rapl_value = read_rapl_value();
-        var rapl_value = old_rapl_value;
         var watch = Stopwatch.StartNew();
 
-        while (!count_reached) {
-            rapl_value = read_rapl_value();
+        while (watch.ElapsedMilliseconds < measurement_time_secs * 1000) {
+            var rapl_value = read_rapl_value();
             measurements.Add((rapl_value, watch.ElapsedTicks));
-            if (rapl_value != old_rapl_value) {
-                old_rapl_value = rapl_value;
-                curr_iteration += 1;
-            }
-            count_reached = curr_iteration == target_iteration;
         }
         foreach (var tuple in measurements) {
             System.Console.WriteLine(tuple.Item1.Replace("\n", String.Empty) + ";" + tuple.Item2);
