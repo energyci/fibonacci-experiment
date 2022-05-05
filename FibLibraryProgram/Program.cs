@@ -3,28 +3,35 @@ using System.Diagnostics;
 using System.Linq;
 using System.Collections.Generic;
 using System;
+using UtilityLibraries;
 
 
 class Program {
 
+
+    private const string FILE_PATH = "/sys/devices/virtual/powercap/intel-rapl/intel-rapl:0/intel-rapl:0:0/energy_uj";
+
+    private static string read_rapl_value() {
+        return System.IO.File.ReadAllText(FILE_PATH);
+    }
     static void TestSlowGetFib42(int time_secs) {
         var tuples = new List<(decimal, long)>();
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        while(watch.ElapsedMilliseconds < time_secs * 1000){
+        while (watch.ElapsedMilliseconds < time_secs * 1000) {
             string before_value = read_rapl_value();
             long before_time = watch.ElapsedTicks;
 
-            FibLibrary.GetSlowFib(42);
+            FibLibrary.SlowGetFib(42);
 
-            string new_value = read_rapl_value;
+            string new_value = read_rapl_value();
             long after_time = watch.ElapsedTicks;
 
             var energy_consumption = Decimal.Parse(new_value) - Decimal.Parse(before_value);
-            var time_elapsed= after_time - before_time;
+            var time_elapsed = after_time - before_time;
             tuples.Add((energy_consumption, time_elapsed));
         }
 
-        foreach(var tuple in tuples){
+        foreach (var tuple in tuples) {
             System.Console.WriteLine(tuple.Item1 + ";" + tuple.Item2);
         }
     }
@@ -32,24 +39,24 @@ class Program {
     static void TestGetFib42(int time_secs) {
         var tuples = new List<(decimal, long)>();
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        while(watch.ElapsedMilliseconds < time_secs * 1000){
+        while (watch.ElapsedMilliseconds < time_secs * 1000) {
             string before_value = read_rapl_value();
             long before_time = watch.ElapsedTicks;
 
             FibLibrary.GetFib(42);
 
-            string new_value = read_rapl_value;
+            string new_value = read_rapl_value();
             long after_time = watch.ElapsedTicks;
 
             var energy_consumption = Decimal.Parse(new_value) - Decimal.Parse(before_value);
-            var time_elapsed= after_time - before_time;
+            var time_elapsed = after_time - before_time;
             tuples.Add((energy_consumption, time_elapsed));
         }
 
-        foreach(var tuple in tuples){
+        foreach (var tuple in tuples) {
             System.Console.WriteLine(tuple.Item1 + ";" + tuple.Item2);
         }
-        
+
     }
 
     static void PrintHelp() {
