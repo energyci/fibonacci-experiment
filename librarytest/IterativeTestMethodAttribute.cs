@@ -26,10 +26,14 @@ namespace StringLibraryTest {
             TestResult[]? currentResults = null;
 
             while (begin_watch.ElapsedMilliseconds < stabilityThreshold * 1_000) {
+                int iteration_counter = 0;
                 string before_value = read_rapl_value();
                 long before_time = begin_watch.ElapsedTicks;
-
-                currentResults = base.Execute(testMethod);
+                long iteration_time = begin_watch.ElapsedMilliseconds;
+                while (begin_watch.ElapsedMilliseconds - iteration_time < 1_000) {
+                    currentResults = base.Execute(testMethod);
+                    iteration_counter++;
+                }
 
                 string new_value = read_rapl_value();
                 long after_time = begin_watch.ElapsedTicks;
@@ -37,7 +41,7 @@ namespace StringLibraryTest {
                 var energy_consumption = Decimal.Parse(new_value) - Decimal.Parse(before_value);
                 // Time in ticks.
                 var time_elapsed = after_time - before_time;
-                tuples.Add((energy_consumption, time_elapsed));
+                tuples.Add((energy_consumption / iteration_counter, time_elapsed / iteration_counter));
 
             }
 
