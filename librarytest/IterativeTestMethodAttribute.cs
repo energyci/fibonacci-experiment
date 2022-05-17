@@ -9,10 +9,15 @@ namespace StringLibraryTest {
     [AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
     public class IterativeTestMethodAttribute : TestMethodAttribute {
         private int stabilityThreshold;
-        private const string FILE_PATH = "/sys/devices/virtual/powercap/intel-rapl/intel-rapl:0/intel-rapl:0:0/energy_uj";
+        private const string CORE_FILE_PATH = "/sys/devices/virtual/powercap/intel-rapl/intel-rapl:0/intel-rapl:0:0/energy_uj";
+        private const string PACKAGE_FILE_PATH = "/sys/devices/virtual/powercap/intel-rapl/intel-rapl:0/energy_uj";
 
-        private string read_rapl_value() {
-            return System.IO.File.ReadAllText(FILE_PATH);
+        private string read_core_rapl_value() {
+            return System.IO.File.ReadAllText(CORE_FILE_PATH);
+        }
+
+        private string read_package_rapl_value() {
+            return System.IO.File.ReadAllText(PACKAGE_FILE_PATH);
         }
 
         public IterativeTestMethodAttribute(int stabilityThreshold) {
@@ -21,36 +26,41 @@ namespace StringLibraryTest {
 
         public override TestResult[] Execute(ITestMethod testMethod) {
             var results = new List<TestResult>();
-            var tuples = new List<(decimal, long)>();
+            var tuples = new List<(decimal, decimal, long, int)>();
             var begin_watch = System.Diagnostics.Stopwatch.StartNew();
             TestResult[]? currentResults = null;
 
             while (begin_watch.ElapsedMilliseconds < stabilityThreshold * 1_000) {
                 int iteration_counter = 0;
-                string before_value = read_rapl_value();
+                string before_core_value = read_core_rapl_value();
+                string before_package_value = read_package_rapl_value();
                 long before_time = begin_watch.ElapsedTicks;
                 long iteration_time = begin_watch.ElapsedMilliseconds;
-                while (begin_watch.ElapsedMilliseconds - iteration_time < 1_000) {
+
+                
+                while (begin_watch.ElapsedMilliseconds - iteration_time < 200) {
                     currentResults = base.Execute(testMethod);
                     iteration_counter++;
                 }
 
-                string new_value = read_rapl_value();
+                string new_core_value = read_core_rapl_value();
+                string new_package_value = read_package_rapl_value();
                 long after_time = begin_watch.ElapsedTicks;
 
-                var energy_consumption = Decimal.Parse(new_value) - Decimal.Parse(before_value);
+                var energy_consumption_core = Decimal.Parse(new_core_value) - Decimal.Parse(before_core_value);
+                var energy_consumption_package = Decimal.Parse(new_package_value) - Decimal.Parse(before_package_value);
                 // Time in ticks.
                 var time_elapsed = after_time - before_time;
-                tuples.Add((energy_consumption / iteration_counter, time_elapsed / iteration_counter));
+                tuples.Add((energy_consumption_core, energy_consumption_package, time_elapsed, iteration_counter));
 
             }
 
-            if (currentResults != null)
+            if(currentResults != null)
                 results.AddRange(currentResults);
 
-
+            System.Console.WriteLine("Core;Package;Time;Iterations");
             foreach (var tuple in tuples) {
-                System.Console.WriteLine(tuple.Item1 + ";" + tuple.Item2);
+                System.Console.WriteLine(tuple.Item1 + ";" + tuple.Item2 + ";" + tuple.Item3 + ";" + tuple.Item4);
             }
             var ticks_per_seconds = (decimal)1 / Stopwatch.Frequency;
             var ticks_per_milliseconds = (decimal)1 / Stopwatch.Frequency * 1000;
